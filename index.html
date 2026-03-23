@@ -192,7 +192,6 @@ tbody td{padding:9px 14px;color:var(--txt2);}
 </style>
 </head>
 <body>
-
 <div id="lockscreen" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;">
   <div style="background:#111118;border:1px solid #2d2d3d;border-radius:12px;padding:40px 44px;width:360px;max-width:92vw;text-align:center">
     <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8a84b;letter-spacing:.06em;margin-bottom:4px">FINANCEIRO</div>
@@ -203,10 +202,7 @@ tbody td{padding:9px 14px;color:var(--txt2);}
       onkeydown="if(event.key==='Enter')checkPwd()"
       onfocus="this.style.borderColor='#c8a84b'" onblur="this.style.borderColor='#2d2d3d'">
     <div id="pwd-err" style="font-size:10px;color:#e05555;height:16px;margin-bottom:8px"></div>
-    <button onclick="checkPwd()"
-      style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">
-      ENTRAR
-    </button>
+    <button onclick="checkPwd()" style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">ENTRAR</button>
   </div>
 </div>
 <script>
@@ -217,7 +213,7 @@ function checkPwd(){
     if(h===HASH){
       sessionStorage.setItem('fin_auth','1');
       const ls=document.getElementById('lockscreen');
-      ls.style.transition='opacity .3s'; ls.style.opacity='0';
+      ls.style.transition='opacity .3s';ls.style.opacity='0';
       setTimeout(()=>ls.style.display='none',300);
     } else {
       document.getElementById('pwd-err').textContent='Senha incorreta';
@@ -341,24 +337,28 @@ async function sha256(msg){
     </div>
   </div>
   <div class="cards" id="inv-cards"></div>
+
+  <div class="divdr">Alocação</div>
   <div class="cr">
     <div class="cbox">
-      <div class="ct">Alocação Atual vs Ideal</div>
-      <canvas id="ch-alloc" style="max-height:220px"></canvas>
+      <div class="ct">Ideal vs Atual (%)</div>
+      <canvas id="ch-alloc" style="max-height:200px"></canvas>
     </div>
-    <div class="cbox"><div class="ct">Distribuição por Ativo</div><canvas id="ch-ativos" style="max-height:220px"></canvas></div>
+    <div class="cbox"><div class="ct">Distribuição Ações</div><canvas id="ch-ativos" style="max-height:200px"></canvas></div>
   </div>
+
+  <div class="divdr">Carteira Ideal</div>
+  <div class="tbox" style="margin-bottom:24px">
+    <div id="inv-ideal"></div>
+  </div>
+
   <div class="divdr">Ações</div>
   <div class="tbox">
-    <div class="port-row hdr"><div>TICKER</div><div>SETOR</div><div></div><div>P.MÉDIO</div><div>COTAÇÃO</div><div>POSIÇÃO</div><div>RESULTADO</div></div>
+    <div class="port-row hdr"><div>TICKER</div><div>SETOR</div><div>VAR. DIA</div><div>P.MÉDIO</div><div>COTAÇÃO</div><div>POSIÇÃO</div><div>RESULTADO</div></div>
     <div id="inv-acoes"></div>
   </div>
-  <div class="divdr">FIIs</div>
-  <div class="tbox">
-    <div class="port-row hdr"><div>TICKER</div><div>SETOR</div><div></div><div>P.MÉDIO</div><div>COTAÇÃO</div><div>POSIÇÃO</div><div>RESULTADO</div></div>
-    <div id="inv-fiis"></div>
-  </div>
 </div>
+
 
 <!-- DIVIDENDOS -->
 <div id="page-dividendos" class="page">
@@ -590,22 +590,25 @@ async function sha256(msg){
 
 <!-- MODAL LANÇAMENTO -->
 <div class="modal-overlay" id="modal">
-  <div class="modal">
+  <div class="modal" style="width:520px">
     <div class="modal-title" id="modal-title">Novo Lançamento</div>
     <div class="form-row">
       <div>
         <div class="form-lbl">Tipo</div>
-        <select id="f-tipo" class="form-ctrl" style="width:100%"><option value="despesa">Despesa</option><option value="receita">Receita</option></select>
+        <select id="f-tipo" class="form-ctrl" style="width:100%" onchange="toggleCartaoFields()">
+          <option value="despesa">Despesa</option>
+          <option value="receita">Receita</option>
+        </select>
       </div>
       <div>
-        <div class="form-lbl">Ano/Mês</div>
-        <input id="f-data" class="form-ctrl" type="month" value="2026-03">
+        <div class="form-lbl">Data da Compra</div>
+        <input id="f-data" class="form-ctrl" type="date" value="2026-03-23">
       </div>
     </div>
     <div class="form-row">
       <div>
-        <div class="form-lbl">Valor (R$)</div>
-        <input id="f-valor" class="form-ctrl" type="number" step="0.01" min="0" placeholder="0,00">
+        <div class="form-lbl">Valor Total (R$)</div>
+        <input id="f-valor" class="form-ctrl" type="number" step="0.01" min="0" placeholder="0,00" oninput="calcParcelas()">
       </div>
       <div>
         <div class="form-lbl">Categoria</div>
@@ -618,12 +621,53 @@ async function sha256(msg){
         <input id="f-desc" class="form-ctrl" type="text" placeholder="Ex: Supermercado Extra">
       </div>
     </div>
+    <!-- CARTÃO / PARCELAS -->
+    <div id="cartao-fields" style="border-top:1px solid var(--b1);margin-top:4px;padding-top:14px">
+      <div class="form-row">
+        <div>
+          <div class="form-lbl">Cartão</div>
+          <select id="f-cartao" class="form-ctrl" style="width:100%" onchange="onCartaoChange()">
+            <option value="none">Sem cartão (débito/dinheiro)</option>
+            <option value="nubank">Nubank</option>
+            <option value="itau">Itaú</option>
+          </select>
+        </div>
+        <div>
+          <div class="form-lbl">Parcelas</div>
+          <select id="f-parcelas" class="form-ctrl" style="width:100%" onchange="calcParcelas()">
+            <option value="1">1x (à vista)</option>
+            <option value="2">2x</option>
+            <option value="3">3x</option>
+            <option value="4">4x</option>
+            <option value="5">5x</option>
+            <option value="6">6x</option>
+            <option value="10">10x</option>
+            <option value="12">12x</option>
+          </select>
+        </div>
+      </div>
+      <!-- Corte/Vencimento editável -->
+      <div id="cartao-config" style="display:none;margin-top:10px">
+        <div class="form-row">
+          <div>
+            <div class="form-lbl">Dia de Corte <span style="color:var(--txt3);font-size:9px">(compras após este dia → próxima fatura)</span></div>
+            <input id="f-corte" class="form-ctrl" type="number" min="1" max="31" style="width:100%" oninput="calcParcelas()">
+          </div>
+          <div>
+            <div class="form-lbl">Dia de Vencimento</div>
+            <input id="f-venc" class="form-ctrl" type="number" min="1" max="31" style="width:100%" oninput="calcParcelas()">
+          </div>
+        </div>
+      </div>
+      <div id="parcelas-preview" style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:10px 14px;font-size:10px;color:var(--txt3);margin-top:8px;display:none;line-height:2"></div>
+    </div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-gold" onclick="saveEntry()">Salvar</button>
     </div>
   </div>
 </div>
+
 
 <script>
 // ── DATA ─────────────────────────────────────────────────────────────────────
@@ -645,7 +689,8 @@ const COLORS6 = ['#c8a84b','#e05555','#4ecc8a','#5b8fee','#c45bd6','#f0914a'];
 const ALLOC_COLORS = ['#4ecc8a','#5b8fee','#c45bd6','#c8a84b','#f0914a','#e05555'];
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
-const R = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+const R  = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+const R2 = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const Rp = v => v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 const pct = v => (v>=0?'+':'') + (v*100).toFixed(1)+'%';
 function filter(ano,mes,tipo){ return ENTRIES.filter(r=>(ano==='todos'||r.ano==ano)&&(mes==='todos'||r.mes==mes)&&(tipo==='todos'||r.tipo===tipo)); }
@@ -841,35 +886,62 @@ function editOrc(inp) {
 
 // ── INVEST ────────────────────────────────────────────────────────────────────
 function rInvest() {
-  const total=APP.saldo_total;
-  const pTot=APP.acoes.reduce((s,a)=>s+a.total,0);
-  const totDiv=APP.dividendos.filter(d=>d.ano>=2024).reduce((s,d)=>s+d.total,0);
+  const total = APP.saldo_total;
+  const pTot = APP.acoes.reduce((s,a)=>s+a.total, 0);
+  const totDiv = APP.dividendos.reduce((s,d)=>s+d.total, 0);
+  const resAcoes = APP.acoes.reduce((s,a)=>s+(a.cotacao-a.preco_medio)*a.qtd, 0);
+
   document.getElementById('inv-cards').innerHTML=`
     <div class="card"><div class="card-accent" style="background:var(--gold)"></div><div class="card-lbl">Patrimônio Total</div><div class="card-val gold">${R(total)}</div><div class="card-sub">Posição atual</div></div>
     <div class="card"><div class="card-accent" style="background:var(--grn)"></div><div class="card-lbl">Ações (Posição)</div><div class="card-val grn">${R(pTot)}</div><div class="card-sub">${((pTot/total)*100).toFixed(1)}% da carteira</div></div>
-    <div class="card"><div class="card-accent" style="background:var(--blu)"></div><div class="card-lbl">Dividendos 2024+</div><div class="card-val blu">${R(totDiv)}</div><div class="card-sub">${APP.dividendos.filter(d=>d.ano>=2024).length} recebimentos</div></div>
-    <div class="card"><div class="card-accent" style="background:var(--red)"></div><div class="card-lbl">Resultado Ações</div><div class="card-val ${APP.acoes.reduce((s,a)=>s+(a.cotacao-a.preco_medio)*a.qtd,0)>=0?'grn':'red'}">${R(APP.acoes.reduce((s,a)=>s+(a.cotacao-a.preco_medio)*a.qtd,0))}</div><div class="card-sub">vs preço médio</div></div>`;
+    <div class="card"><div class="card-accent" style="background:var(--blu)"></div><div class="card-lbl">Dividendos Recebidos</div><div class="card-val blu">${R(totDiv)}</div><div class="card-sub">${APP.dividendos.length} pagamentos</div></div>
+    <div class="card"><div class="card-accent" style="background:${resAcoes>=0?'var(--grn)':'var(--red)'}"></div><div class="card-lbl">Resultado Ações</div><div class="card-val ${resAcoes>=0?'grn':'red'}">${resAcoes>=0?'+':''}${R(resAcoes)}</div><div class="card-sub">vs preço médio</div></div>`;
 
-  // Alocação
-  const aLabels=APP.alocacao.map(a=>a.classe);
-  const aIdeal=APP.alocacao.map(a=>a.pct_ideal*100);
-  const aAtual=APP.alocacao.map(a=>((a.valor_atual/total)*100).toFixed(1)*1);
+  // Carteira Ideal table
+  const idealHtml = APP.alocacao.map(a => {
+    const idealVal = total * a.pct_ideal;
+    const diff = idealVal - a.valor_atual;
+    const pctAtual = (a.valor_atual / total * 100).toFixed(1);
+    return `<div style="display:grid;grid-template-columns:2fr 60px 100px 100px 100px;gap:0;padding:9px 16px;border-bottom:1px solid var(--b1);font-size:11px;align-items:center">
+      <div style="color:var(--txt)">${a.classe}</div>
+      <div style="color:var(--txt3)">${(a.pct_ideal*100).toFixed(0)}% → ${pctAtual}%</div>
+      <div style="color:var(--txt3)">${R(idealVal)}</div>
+      <div style="color:var(--txt)">${R(a.valor_atual)}</div>
+      <div style="color:${diff>0?'var(--grn)':'var(--red)'}">${diff>=0?'+':''}${R(diff)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('inv-ideal').innerHTML = `
+    <div style="display:grid;grid-template-columns:2fr 60px 100px 100px 100px;gap:0;padding:8px 16px;background:var(--s2);border-bottom:2px solid var(--b2);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3)">
+      <div>Classe</div><div>% Ideal→Atual</div><div>$ Ideal</div><div>$ Atual</div><div>Diferença</div>
+    </div>
+    ${idealHtml}`;
+
+  // Charts
+  const aLabels = APP.alocacao.map(a=>a.classe.replace(' - ',' ').replace('Liquidez Diária','Liq.').replace('Resgatável','Resg.'));
+  const aIdeal = APP.alocacao.map(a=>a.pct_ideal*100);
+  const aAtual = APP.alocacao.map(a=>+(a.valor_atual/total*100).toFixed(1));
   mk('ch-alloc',{type:'bar',data:{labels:aLabels,datasets:[{label:'Ideal %',data:aIdeal,backgroundColor:'rgba(91,143,238,.5)',borderRadius:3},{label:'Atual %',data:aAtual,backgroundColor:'rgba(200,168,75,.7)',borderRadius:3}]},options:{responsive:true,plugins:{legend:{labels:{color:'#8888a0',font:{size:9}}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toFixed(1)}%`}}},scales:{x:{ticks:{color:'#55556a',font:{size:8}},grid:{color:'#22222e'}},y:{ticks:{color:'#55556a',font:{size:9},callback:v=>v+'%'},grid:{color:'#22222e'}}}}});
 
-  // Donut ativos
-  const aNames=APP.acoes.map(a=>a.ticker), aVals=APP.acoes.map(a=>a.total);
-  mk('ch-ativos',{type:'doughnut',data:{labels:aNames,datasets:[{data:aVals,backgroundColor:COLORS6,borderWidth:0,spacing:2}]},options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:9},padding:8,usePointStyle:true}},tooltip:{callbacks:{label:c=>` ${c.label}: ${R(c.raw)}`}}}}});
+  const aNames = APP.acoes.map(a=>a.ticker);
+  const aVals = APP.acoes.map(a=>a.total);
+  mk('ch-ativos',{type:'doughnut',data:{labels:aNames,datasets:[{data:aVals,backgroundColor:COLORS6,borderWidth:0,spacing:2}]},options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:9},padding:8,usePointStyle:true}},tooltip:{callbacks:{label:c=>` ${c.label}: ${R2(c.raw)}`}}}}});
 
-  // Ações table
-  document.getElementById('inv-acoes').innerHTML=APP.acoes.map(a=>{
-    const r=(a.cotacao-a.preco_medio)/a.preco_medio;
-    const varDia=a.variacao!=null?`<span style="font-size:9px;color:${a.variacao>=0?'var(--grn)':'var(--red)'}">${a.variacao>=0?'+':''}${a.variacao?.toFixed(2)}%</span>`:'';
-    return `<div class="port-row"><div style="color:var(--txt);font-weight:600">${a.ticker}</div><div style="color:var(--txt3)">${a.setor}</div><div>${varDia}</div><div>${R(a.preco_medio)}</div><div>${R(a.cotacao)}</div><div>${R(a.total)}</div><div><span class="pct-pill ${r>=0?'pct-pos':'pct-neg'}">${pct(r)}</span></div></div>`;
-  }).join('');
-  document.getElementById('inv-fiis').innerHTML=APP.fiis.map(a=>{
-    const r=(a.cotacao-a.preco_medio)/a.preco_medio;
-    const varDia=a.variacao!=null?`<span style="font-size:9px;color:${a.variacao>=0?'var(--grn)':'var(--red)'}">${a.variacao>=0?'+':''}${a.variacao?.toFixed(2)}%</span>`:'';
-    return `<div class="port-row"><div style="color:var(--txt);font-weight:600">${a.ticker}</div><div style="color:var(--txt3)">${a.setor}</div><div>${varDia}</div><div>${R(a.preco_medio)}</div><div>${R(a.cotacao)}</div><div>${R(a.total)}</div><div><span class="pct-pill ${r>=0?'pct-pos':'pct-neg'}">${pct(r)}</span></div></div>`;
+  // Ações table — R2 for prices
+  document.getElementById('inv-acoes').innerHTML = APP.acoes.map(a => {
+    const r = (a.cotacao - a.preco_medio) / a.preco_medio;
+    const varDia = a.variacao != null
+      ? `<span style="font-size:9px;color:${a.variacao>=0?'var(--grn)':'var(--red)'}">${a.variacao>=0?'+':''}${a.variacao.toFixed(2)}%</span>`
+      : '';
+    return `<div class="port-row">
+      <div style="color:var(--txt);font-weight:600">${a.ticker}</div>
+      <div style="color:var(--txt3)">${a.setor}</div>
+      <div>${varDia}</div>
+      <div>${R2(a.preco_medio)}</div>
+      <div>${R2(a.cotacao)}</div>
+      <div>${R(a.total)}</div>
+      <div><span class="pct-pill ${r>=0?'pct-pos':'pct-neg'}">${pct(r)}</span></div>
+    </div>`;
   }).join('');
 }
 
@@ -910,15 +982,32 @@ function drawLanc() {
   const tipo=document.getElementById('l-tipo').value, cat=document.getElementById('l-cat').value;
   const search=document.getElementById('l-search').value.toLowerCase();
   let data=ENTRIES.filter(r=>(ano==='todos'||r.ano==ano)&&(mes==='todos'||r.mes==mes)&&(tipo==='todos'||r.tipo===tipo)&&(cat==='todos'||r.categoria===cat)&&(!search||r.descricao.toLowerCase().includes(search)||r.categoria.toLowerCase().includes(search)));
-  data.sort((a,b)=>b.ano*100+b.mes-(a.ano*100+a.mes));
+  // Sort: by full date desc if available, else by ano/mes desc
+  data.sort((a,b)=>{
+    const da = a.data ? new Date(a.data) : new Date(a.ano, a.mes-1, 28);
+    const db = b.data ? new Date(b.data) : new Date(b.ano, b.mes-1, 28);
+    return db - da;
+  });
   const totalSaldo=data.reduce((s,r)=>s+r.valor*(r.tipo==='despesa'?-1:1),0);
   document.getElementById('l-count').textContent=`${data.length.toLocaleString('pt-BR')} registros`;
   document.getElementById('l-total').textContent=`Saldo: ${totalSaldo>=0?'+':''}${R(Math.abs(totalSaldo))}`;
   const pages=Math.ceil(data.length/PS);
   const slice=data.slice((lPage-1)*PS, lPage*PS);
-  document.getElementById('l-tbody').innerHTML=slice.map((r,i)=>{
+  document.getElementById('l-tbody').innerHTML=slice.map((r)=>{
     const idx=ENTRIES.indexOf(r);
-    return `<tr><td style="color:var(--txt3)">${r.ano}/${String(r.mes).padStart(2,'0')}</td><td>${r.categoria}</td><td style="color:var(--txt)">${r.descricao}</td><td><span class="badge ${r.tipo==='despesa'?'badge-red':'badge-grn'}">${r.tipo}</span></td><td style="text-align:right;color:${r.tipo==='despesa'?'var(--red)':'var(--grn)'}">${R(r.valor)}</td><td><button class="del-btn" onclick="delEntry(${idx})" title="Excluir">✕</button></td></tr>`;
+    // Format date: use full date if available, else mes/ano
+    const dataFmt = r.data
+      ? new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR')
+      : `${String(r.mes).padStart(2,'0')}/${r.ano}`;
+    const parcelaTag = r.parcela ? `<span style="font-size:9px;color:var(--txt3);margin-left:4px">${r.parcela}/${r.totalParcelas}</span>` : '';
+    return `<tr>
+      <td style="color:var(--txt3);white-space:nowrap">${dataFmt}</td>
+      <td>${r.categoria}</td>
+      <td style="color:var(--txt)">${r.descricao}${parcelaTag}</td>
+      <td><span class="badge ${r.tipo==='despesa'?'badge-red':'badge-grn'}">${r.tipo}</span></td>
+      <td style="text-align:right;color:${r.tipo==='despesa'?'var(--red)':'var(--grn)'}">${R2(r.valor)}</td>
+      <td><button class="del-btn" onclick="delEntry(${idx})" title="Excluir">✕</button></td>
+    </tr>`;
   }).join('');
   document.getElementById('l-pinfo').textContent=`Pág ${lPage} de ${pages||1} · ${data.length} resultados`;
   const pag=document.getElementById('l-pag'); pag.innerHTML='';
@@ -934,20 +1023,174 @@ function delEntry(idx) {
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
-function openModal() { document.getElementById('modal').classList.add('open'); }
-function closeModal() { document.getElementById('modal').classList.remove('open'); document.getElementById('f-valor').value=''; document.getElementById('f-desc').value=''; }
+function toggleCartaoFields() {
+  // Always show cartão fields for despesa
+  const tipo = document.getElementById('f-tipo').value;
+  document.getElementById('cartao-fields').style.display = tipo === 'despesa' ? 'block' : 'none';
+}
+
+// Cartão defaults: { corte, venc } — saved to localStorage
+const CARTAO_DEFAULTS = {
+  nubank: { corte: 25, venc: 4 },
+  itau:   { corte: 13, venc: 20 }
+};
+function getCartaoConfig(cartao) {
+  const saved = JSON.parse(localStorage.getItem('fin_cartao_' + cartao) || 'null');
+  return saved || CARTAO_DEFAULTS[cartao] || { corte: 15, venc: 5 };
+}
+function saveCartaoConfig(cartao, corte, venc) {
+  localStorage.setItem('fin_cartao_' + cartao, JSON.stringify({ corte, venc }));
+}
+
+function onCartaoChange() {
+  const cartao = document.getElementById('f-cartao').value;
+  const cfg = document.getElementById('cartao-config');
+  if(cartao === 'none') {
+    cfg.style.display = 'none';
+  } else {
+    cfg.style.display = 'block';
+    const c = getCartaoConfig(cartao);
+    document.getElementById('f-corte').value = c.corte;
+    document.getElementById('f-venc').value = c.venc;
+  }
+  calcParcelas();
+}
+
+function calcParcelas() {
+  const cartao = document.getElementById('f-cartao').value;
+  const nParcelas = parseInt(document.getElementById('f-parcelas').value) || 1;
+  const valor = parseFloat(document.getElementById('f-valor').value) || 0;
+  const dataStr = document.getElementById('f-data').value;
+  const preview = document.getElementById('parcelas-preview');
+
+  if(!dataStr || valor === 0) { preview.style.display = 'none'; return; }
+
+  // Save cartão config if changed
+  if(cartao !== 'none') {
+    const corte = parseInt(document.getElementById('f-corte').value) || CARTAO_DEFAULTS[cartao]?.corte || 15;
+    const venc  = parseInt(document.getElementById('f-venc').value)  || CARTAO_DEFAULTS[cartao]?.venc  || 5;
+    saveCartaoConfig(cartao, corte, venc);
+  }
+
+  const dataCompra = new Date(dataStr + 'T12:00:00');
+  const parcelas = gerarParcelas(dataCompra, cartao, nParcelas, valor);
+
+  if(nParcelas <= 1 && cartao === 'none') { preview.style.display = 'none'; return; }
+
+  preview.style.display = 'block';
+  preview.innerHTML = parcelas.map((p, i) =>
+    `<span style="color:var(--txt3)">${i+1}x</span> <span style="color:var(--txt);font-weight:500">${R2(p.valor)}</span> <span style="color:var(--txt3)">→ vence</span> <span style="color:var(--gold)">${p.dataFmt}</span>`
+  ).join('<br>');
+}
+
+function gerarParcelas(dataCompra, cartao, nParcelas, valorTotal) {
+  const valorParcela = Math.round((valorTotal / nParcelas) * 100) / 100;
+  const parcelas = [];
+
+  if(cartao === 'none') {
+    // Débito/dinheiro: lança no mês da compra + i meses
+    for(let i = 0; i < nParcelas; i++) {
+      const d = new Date(dataCompra.getFullYear(), dataCompra.getMonth() + i, dataCompra.getDate());
+      parcelas.push({
+        data: d.toISOString().slice(0,10),
+        dataFmt: d.toLocaleDateString('pt-BR'),
+        mes: d.getMonth() + 1,
+        ano: d.getFullYear(),
+        valor: valorParcela
+      });
+    }
+  } else {
+    const cfg = getCartaoConfig(cartao);
+    const corteDia = parseInt(document.getElementById('f-corte')?.value) || cfg.corte;
+    const vencDia  = parseInt(document.getElementById('f-venc')?.value)  || cfg.venc;
+    const diaCompra = dataCompra.getDate();
+
+    // Determine the first vencimento:
+    // - compra ATÉ o dia de corte → entra na fatura atual → vence no mês seguinte (no vencDia)
+    // - compra APÓS o dia de corte → entra na próxima fatura → vence em dois meses
+    let mesVenc = dataCompra.getMonth(); // 0-indexed
+    let anoVenc = dataCompra.getFullYear();
+
+    if(diaCompra <= corteDia) {
+      // Entra na fatura atual, vence próximo mês
+      mesVenc += 1;
+    } else {
+      // Entra na fatura seguinte, vence em dois meses
+      mesVenc += 2;
+    }
+    // Normalize month overflow
+    while(mesVenc > 11) { mesVenc -= 12; anoVenc++; }
+
+    for(let i = 0; i < nParcelas; i++) {
+      let m = mesVenc + i, a = anoVenc;
+      while(m > 11) { m -= 12; a++; }
+      const d = new Date(a, m, vencDia);
+      parcelas.push({
+        data: d.toISOString().slice(0,10),
+        dataFmt: d.toLocaleDateString('pt-BR'),
+        mes: d.getMonth() + 1,
+        ano: d.getFullYear(),
+        valor: valorParcela
+      });
+    }
+  }
+
+  // Fix last parcel rounding
+  const soma = parcelas.reduce((s, p) => s + p.valor, 0);
+  const diff = Math.round((valorTotal - soma) * 100) / 100;
+  if(diff !== 0) parcelas[parcelas.length - 1].valor = Math.round((parcelas[parcelas.length - 1].valor + diff) * 100) / 100;
+
+  return parcelas;
+}
+
+function openModal() {
+  // Set today's date as default
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('f-data').value = today;
+  document.getElementById('modal').classList.add('open');
+  toggleCartaoFields();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('f-valor').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-parcelas').value = '1';
+  document.getElementById('f-cartao').value = 'none';
+  document.getElementById('cartao-config').style.display = 'none';
+  document.getElementById('parcelas-preview').style.display = 'none';
+}
+
 function saveEntry() {
-  const tipo=document.getElementById('f-tipo').value;
-  const dateParts=document.getElementById('f-data').value.split('-');
-  const ano=+dateParts[0], mes=+dateParts[1];
-  const valor=parseFloat(document.getElementById('f-valor').value);
-  const cat=document.getElementById('f-cat').value;
-  const desc=document.getElementById('f-desc').value.trim();
-  if(!valor||!desc||!cat||!ano||!mes){ alert('Preencha todos os campos.'); return; }
-  ENTRIES.push({ ano, mes, tipo, categoria: cat, descricao: desc, valor: Math.abs(valor) });
+  const tipo = document.getElementById('f-tipo').value;
+  const dataStr = document.getElementById('f-data').value;
+  const valor = parseFloat(document.getElementById('f-valor').value);
+  const cat = document.getElementById('f-cat').value;
+  const desc = document.getElementById('f-desc').value.trim();
+  const cartao = document.getElementById('f-cartao').value;
+  const nParcelas = parseInt(document.getElementById('f-parcelas').value) || 1;
+
+  if(!valor || !desc || !cat || !dataStr) { alert('Preencha todos os campos.'); return; }
+
+  const dataCompra = new Date(dataStr + 'T12:00:00');
+  const parcelas = gerarParcelas(dataCompra, tipo === 'despesa' ? cartao : 'none', nParcelas, Math.abs(valor));
+
+  parcelas.forEach((p, i) => {
+    ENTRIES.push({
+      data: p.data,
+      ano: p.ano,
+      mes: p.mes,
+      tipo,
+      categoria: cat,
+      descricao: nParcelas > 1 ? `${desc} (${i+1}/${nParcelas})` : desc,
+      valor: p.valor,
+      ...(nParcelas > 1 ? { parcela: i+1, totalParcelas: nParcelas } : {})
+    });
+  });
+
   closeModal();
   drawLanc();
-  ghSaveEntries(); // persist to GitHub
+  ghSaveEntries();
 }
 
 // ── IMPORTAR ──────────────────────────────────────────────────────────────────
@@ -1838,22 +2081,29 @@ function showGHStatus(msg,color){
 
 // ── BRAPI.DEV ─────────────────────────────────────────────────────────────────
 async function fetchCotacoes(){
-  const tickers=[...APP.acoes.map(a=>a.ticker),...APP.fiis.map(a=>a.ticker)].join(',');
-  const badge=document.getElementById('brapi-badge');
+  const tickers = APP.acoes.map(a=>a.ticker).join(',');
+  const badge = document.getElementById('brapi-badge');
+  if(badge) badge.innerHTML = `<span style="color:var(--txt3);font-size:9px">↻ buscando...</span>`;
   try {
-    const res=await fetch(`https://brapi.dev/api/quote/${tickers}?token=demo`,{signal:AbortSignal.timeout(8000)});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data=await res.json();
-    (data.results||[]).forEach(q=>{
-      const acao=APP.acoes.find(a=>a.ticker===q.symbol);
-      const fii=APP.fiis.find(a=>a.ticker===q.symbol);
-      if(acao&&q.regularMarketPrice){ acao.cotacao=q.regularMarketPrice; acao.total=acao.cotacao*acao.qtd; acao.variacao=q.regularMarketChangePercent; }
-      if(fii&&q.regularMarketPrice){ fii.cotacao=q.regularMarketPrice; fii.total=fii.cotacao*fii.qtd; fii.variacao=q.regularMarketChangePercent; }
+    const res = await fetch(`https://brapi.dev/api/quote/${tickers}?fundamental=false&token=demo`, {signal: AbortSignal.timeout(10000)});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    let updated = 0;
+    (data.results || []).forEach(q => {
+      const acao = APP.acoes.find(a => a.ticker === q.symbol);
+      if(acao && q.regularMarketPrice) {
+        acao.cotacao = q.regularMarketPrice;
+        acao.total = acao.cotacao * acao.qtd;
+        acao.variacao = q.regularMarketChangePercent || 0;
+        updated++;
+      }
     });
-    if(badge) badge.innerHTML=`<span style="color:var(--grn);font-size:9px;letter-spacing:.06em">● AO VIVO · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`;
-    rInvest(); // re-render with live prices
-  } catch(e){
-    if(badge) badge.innerHTML=`<span style="color:var(--txt3);font-size:9px">○ offline</span>`;
+    if(badge) badge.innerHTML = updated > 0
+      ? `<span style="color:var(--grn);font-size:9px;letter-spacing:.06em">● AO VIVO · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`
+      : `<span style="color:var(--gold);font-size:9px">⚠ token demo limitado</span>`;
+    rInvest();
+  } catch(e) {
+    if(badge) badge.innerHTML = `<span style="color:var(--txt3);font-size:9px">○ offline · ${e.message}</span>`;
   }
 }
 
