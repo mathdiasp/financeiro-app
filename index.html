@@ -210,25 +210,12 @@ tbody td{padding:9px 14px;color:var(--txt2);}
 function checkPwd(){
   const HASH='5f73c3514a683022e89a2adb3d84979594bb5184732538519afdae15ff6564a5';
   sha256(document.getElementById('pwd-inp').value).then(h=>{
-    if(h===HASH){
-      sessionStorage.setItem('fin_auth','1');
-      const ls=document.getElementById('lockscreen');
-      ls.style.transition='opacity .3s';ls.style.opacity='0';
-      setTimeout(()=>ls.style.display='none',300);
-    } else {
-      document.getElementById('pwd-err').textContent='Senha incorreta';
-      document.getElementById('pwd-inp').style.borderColor='#e05555';
-      document.getElementById('pwd-inp').value='';
-      setTimeout(()=>{document.getElementById('pwd-err').textContent='';document.getElementById('pwd-inp').style.borderColor='#2d2d3d';},2000);
-    }
+    if(h===HASH){sessionStorage.setItem('fin_auth','1');const ls=document.getElementById('lockscreen');ls.style.transition='opacity .3s';ls.style.opacity='0';setTimeout(()=>ls.style.display='none',300);}
+    else{document.getElementById('pwd-err').textContent='Senha incorreta';document.getElementById('pwd-inp').style.borderColor='#e05555';document.getElementById('pwd-inp').value='';setTimeout(()=>{document.getElementById('pwd-err').textContent='';document.getElementById('pwd-inp').style.borderColor='#2d2d3d';},2000);}
   });
 }
-async function sha256(msg){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
+async function sha256(msg){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 </script>
-
 <div class="app">
 <!-- SIDEBAR -->
 <aside class="sb">
@@ -982,26 +969,34 @@ function drawLanc() {
   const tipo=document.getElementById('l-tipo').value, cat=document.getElementById('l-cat').value;
   const search=document.getElementById('l-search').value.toLowerCase();
   let data=ENTRIES.filter(r=>(ano==='todos'||r.ano==ano)&&(mes==='todos'||r.mes==mes)&&(tipo==='todos'||r.tipo===tipo)&&(cat==='todos'||r.categoria===cat)&&(!search||r.descricao.toLowerCase().includes(search)||r.categoria.toLowerCase().includes(search)));
-  // Sort: by full date desc if available, else by ano/mes desc
+
+  // Sort: full date desc first, then ano/mes desc
   data.sort((a,b)=>{
-    const da = a.data ? new Date(a.data) : new Date(a.ano, a.mes-1, 28);
-    const db = b.data ? new Date(b.data) : new Date(b.ano, b.mes-1, 28);
-    return db - da;
+    const hasDateA = !!a.data, hasDateB = !!b.data;
+    if(hasDateA && hasDateB) return new Date(b.data) - new Date(a.data);
+    if(hasDateA && !hasDateB) return (b.ano*100+b.mes) - (a.ano*100+a.mes) || -1;
+    if(!hasDateA && hasDateB) return (b.ano*100+b.mes) - (a.ano*100+a.mes) || 1;
+    return (b.ano*100+b.mes) - (a.ano*100+a.mes);
   });
+
   const totalSaldo=data.reduce((s,r)=>s+r.valor*(r.tipo==='despesa'?-1:1),0);
   document.getElementById('l-count').textContent=`${data.length.toLocaleString('pt-BR')} registros`;
   document.getElementById('l-total').textContent=`Saldo: ${totalSaldo>=0?'+':''}${R(Math.abs(totalSaldo))}`;
   const pages=Math.ceil(data.length/PS);
   const slice=data.slice((lPage-1)*PS, lPage*PS);
+
   document.getElementById('l-tbody').innerHTML=slice.map((r)=>{
     const idx=ENTRIES.indexOf(r);
-    // Format date: use full date if available, else mes/ano
-    const dataFmt = r.data
-      ? new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR')
-      : `${String(r.mes).padStart(2,'0')}/${r.ano}`;
+    // Display: full date if available, else "Jan/2026" style
+    let dataFmt;
+    if(r.data) {
+      dataFmt = new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR');
+    } else {
+      dataFmt = `${MESES[r.mes]}/${r.ano}`;
+    }
     const parcelaTag = r.parcela ? `<span style="font-size:9px;color:var(--txt3);margin-left:4px">${r.parcela}/${r.totalParcelas}</span>` : '';
     return `<tr>
-      <td style="color:var(--txt3);white-space:nowrap">${dataFmt}</td>
+      <td style="color:var(--txt3);white-space:nowrap;font-size:10px">${dataFmt}</td>
       <td>${r.categoria}</td>
       <td style="color:var(--txt)">${r.descricao}${parcelaTag}</td>
       <td><span class="badge ${r.tipo==='despesa'?'badge-red':'badge-grn'}">${r.tipo}</span></td>
@@ -1009,6 +1004,7 @@ function drawLanc() {
       <td><button class="del-btn" onclick="delEntry(${idx})" title="Excluir">✕</button></td>
     </tr>`;
   }).join('');
+
   document.getElementById('l-pinfo').textContent=`Pág ${lPage} de ${pages||1} · ${data.length} resultados`;
   const pag=document.getElementById('l-pag'); pag.innerHTML='';
   const addPB=(lbl,p,act)=>{ const b=document.createElement('button'); b.className='pb'+(act?' active':''); b.textContent=lbl; b.disabled=p<1||p>pages; b.onclick=()=>{ lPage=p; drawLanc(); }; pag.appendChild(b); };
