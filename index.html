@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Financeiro Pessoal</title>
-<!-- no external deps -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
 :root{--bg:#0a0a0f;--s1:#111118;--s2:#18181f;--b1:#22222e;--b2:#2d2d3d;--gold:#c8a84b;--gold2:#e8c46a;--goldd:rgba(200,168,75,.12);--goldd2:rgba(200,168,75,.06);--txt:#e8e8f0;--txt2:#8888a0;--txt3:#55556a;--red:#e05555;--redd:rgba(224,85,85,.12);--grn:#4ecc8a;--grnd:rgba(78,204,138,.12);--blu:#5b8fee;--blud:rgba(91,143,238,.12);}
@@ -180,59 +180,6 @@ tbody td{padding:9px 14px;color:var(--txt2);}
 </style>
 </head>
 <body>
-
-<div id="lockscreen" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;">
-  <div style="background:#111118;border:1px solid #2d2d3d;border-radius:12px;padding:40px 44px;width:360px;max-width:92vw;text-align:center">
-    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8a84b;letter-spacing:.06em;margin-bottom:4px">FINANCEIRO</div>
-    <div style="font-size:10px;color:#55556a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px">Dashboard Pessoal</div>
-    <div style="font-size:9px;color:#55556a;letter-spacing:.1em;text-transform:uppercase;text-align:left;margin-bottom:6px">Senha</div>
-    <input id="pwd-inp" type="password" placeholder="••••••••"
-      style="width:100%;background:#18181f;border:1px solid #2d2d3d;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:14px;padding:11px 14px;border-radius:6px;outline:none;letter-spacing:.15em;margin-bottom:10px;box-sizing:border-box"
-      onkeydown="if(event.key==='Enter')checkPwd()"
-      onfocus="this.style.borderColor='#c8a84b'" onblur="this.style.borderColor='#2d2d3d'">
-    <div id="pwd-err" style="font-size:10px;color:#e05555;height:16px;margin-bottom:8px"></div>
-    <button onclick="checkPwd()"
-      style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">
-      ENTRAR
-    </button>
-  </div>
-</div>
-<script>
-(function(){
-  // Check if already authenticated this session
-  if(sessionStorage.getItem('fin_auth')==='1'){
-    document.getElementById('lockscreen').style.display='none';
-  }
-})();
-function checkPwd(){
-  const v=document.getElementById('pwd-inp').value;
-  // SHA-256 of password stored as hash — change HASH below to your password hash
-  // Default password: matheus2026
-  // To change: run sha256('yourpassword') at console and update HASH
-  const HASH='5f73c3514a683022e89a2adb3d84979594bb5184732538519afdae15ff6564a5';
-  sha256(v).then(h=>{
-    if(h===HASH){
-      sessionStorage.setItem('fin_auth','1');
-      const ls=document.getElementById('lockscreen');
-      ls.style.opacity='1';
-      ls.style.transition='opacity .3s';
-      setTimeout(()=>{ls.style.opacity='0';setTimeout(()=>ls.style.display='none',300);},100);
-    } else {
-      const err=document.getElementById('pwd-err');
-      err.textContent='Senha incorreta';
-      const inp=document.getElementById('pwd-inp');
-      inp.style.borderColor='#e05555';
-      inp.value='';
-      setTimeout(()=>{err.textContent='';inp.style.borderColor='#2d2d3d';},2000);
-    }
-  });
-}
-async function sha256(msg){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-</script>
-
 <div class="app">
 <!-- SIDEBAR -->
 <aside class="sb">
@@ -610,191 +557,19 @@ function filter(ano,mes,tipo){ return ENTRIES.filter(r=>(ano==='todos'||r.ano==a
 function sumCat(data){ const g={}; data.forEach(r=>g[r.categoria]=(g[r.categoria]||0)+r.valor); return g; }
 function monthly(ano){ const res={}; for(let m=1;m<=12;m++){ const rows=ENTRIES.filter(r=>r.ano==ano&&r.mes==m); res[m]={rec:rows.filter(r=>r.tipo==='receita').reduce((s,r)=>s+r.valor,0),dep:rows.filter(r=>r.tipo==='despesa').reduce((s,r)=>s+r.valor,0)}; } return res; }
 
-// ── PURE CANVAS CHART ENGINE ──────────────────────────────────────────────────
-const FONT = "'DM Mono',monospace";
-const CC = {bg:'#0a0a0f',b1:'#22222e',b2:'#2d2d3d',txt:'#e8e8f0',txt2:'#8888a0',txt3:'#55556a'};
-const chartCfgs = {};
+// ── CHART ENGINE (Chart.js) ───────────────────────────────────────────────────
+const chartInst = {};
 
 function mk(id, cfg) {
-  const canvas = document.getElementById(id);
-  if(!canvas) return;
-  chartCfgs[id] = cfg;
-  const ctx = canvas.getContext('2d');
-  const par = canvas.parentElement;
-  const W = Math.max(par.clientWidth||400, 200);
-  const mhAttr = canvas.style.maxHeight || canvas.getAttribute('style');
-  const maxH = parseInt((mhAttr||'').match(/(\d+)px/)?.[1]) || 240;
-  canvas.width = W; canvas.height = maxH;
-  ctx.clearRect(0,0,W,maxH);
-  const t = cfg.type;
-  if(t==='bar' && cfg.data.datasets[0]?.indexAxis==='y') drawBarH(ctx,W,maxH,cfg);
-  else if(t==='bar') drawBar(ctx,W,maxH,cfg);
-  else if(t==='line') drawLine(ctx,W,maxH,cfg);
-  else if(t==='doughnut') drawDonut(ctx,W,maxH,cfg);
+  if(chartInst[id]) chartInst[id].destroy();
+  chartInst[id] = new Chart(document.getElementById(id), cfg);
 }
-window.addEventListener('resize',()=>Object.keys(chartCfgs).forEach(id=>mk(id,chartCfgs[id])));
+window.addEventListener('resize', () => {
+  Object.keys(chartInst).forEach(id => {
+    if(chartInst[id]) { const cfg = chartInst[id].config; chartInst[id].destroy(); chartInst[id] = new Chart(document.getElementById(id), cfg); }
+  });
+});
 
-function niceTicks(min,max,n){
-  const range=max-min||1, step=Math.pow(10,Math.floor(Math.log10(range/n)));
-  const nice=Math.ceil(range/n/step)*step, start=Math.floor(min/nice)*nice;
-  const t=[]; for(let v=start;v<=max+nice*.1;v+=nice) t.push(Math.round(v*100)/100);
-  return t;
-}
-function rRect(ctx,x,y,w,h,r){
-  r=Math.min(r,Math.abs(h)/2,Math.abs(w)/2);
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
-}
-function fmtK(v){
-  const a=Math.abs(v);
-  if(a>=1e6) return 'R$'+(v/1e6).toFixed(1)+'M';
-  if(a>=1000) return 'R$'+(v/1000).toFixed(0)+'k';
-  return 'R$'+Math.round(v);
-}
-
-function drawBar(ctx,W,H,cfg){
-  const labels=cfg.data.labels, dsets=cfg.data.datasets;
-  const P={t:20,r:10,b:36,l:62};
-  const gW=W-P.l-P.r, gH=H-P.t-P.b, n=labels.length, nD=dsets.length;
-  const all=dsets.flatMap(d=>d.data.map(v=>v||0));
-  const vMin=Math.min(0,...all), vMax=Math.max(...all,1), vR=vMax-vMin;
-  const y0=P.t+gH*(1-(0-vMin)/vR);
-  niceTicks(vMin,vMax,5).forEach(v=>{
-    const y=P.t+gH*(1-(v-vMin)/vR);
-    ctx.strokeStyle=CC.b1;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+gW,y);ctx.stroke();
-    ctx.fillStyle=CC.txt3;ctx.font=`9px ${FONT}`;ctx.textAlign='right';
-    ctx.fillText(fmtK(v),P.l-4,y+3);
-  });
-  const gW2=gW/n, bW=Math.max(2,(gW2/nD)-2);
-  dsets.forEach((ds,di)=>{
-    ds.data.forEach((v,i)=>{
-      v=v||0;
-      const x=P.l+i*gW2+di*(bW+2)+(gW2-nD*bW-(nD-1)*2)/2;
-      const bH=Math.abs(v)/vR*gH, y=v>=0?y0-bH:y0;
-      const col=Array.isArray(ds.backgroundColor)?ds.backgroundColor[i]:(ds.backgroundColor||'#c8a84b');
-      ctx.fillStyle=col; rRect(ctx,x,y,bW,Math.max(bH,1),2); ctx.fill();
-    });
-  });
-  ctx.fillStyle=CC.txt3;ctx.font=`9px ${FONT}`;ctx.textAlign='center';
-  const step=Math.ceil(n/14);
-  labels.forEach((l,i)=>{
-    if(i%step!==0) return;
-    ctx.fillText(l.length>7?l.slice(0,6)+'…':l, P.l+i*gW2+gW2/2, H-6);
-  });
-  if(nD>1){
-    let lx=P.l;
-    dsets.forEach(ds=>{
-      const col=Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor;
-      ctx.fillStyle=col; ctx.fillRect(lx,4,8,8);
-      ctx.fillStyle=CC.txt2;ctx.font=`9px ${FONT}`;ctx.textAlign='left';
-      ctx.fillText(ds.label||'',lx+11,12);
-      lx+=ctx.measureText(ds.label||'').width+28;
-    });
-  }
-}
-
-function drawBarH(ctx,W,H,cfg){
-  const labels=cfg.data.labels, ds=cfg.data.datasets[0];
-  const P={t:4,r:70,b:4,l:140};
-  const gW=W-P.l-P.r, gH=H-P.t-P.b, n=labels.length;
-  const vMax=Math.max(...ds.data.map(v=>v||0),1);
-  const bH=Math.max(4,gH/n-6);
-  const cols=Array.isArray(ds.backgroundColor)?ds.backgroundColor:Array(n).fill(ds.backgroundColor||'#c8a84b');
-  labels.forEach((l,i)=>{
-    const y=P.t+i*(gH/n)+(gH/n-bH)/2;
-    const bW=((ds.data[i]||0)/vMax)*gW;
-    ctx.fillStyle=cols[i]||'#c8a84b'; rRect(ctx,P.l,y,Math.max(bW,1),bH,2); ctx.fill();
-    ctx.fillStyle=CC.txt2;ctx.font=`10px ${FONT}`;ctx.textAlign='right';
-    ctx.fillText(l.length>17?l.slice(0,16)+'…':l, P.l-6, y+bH/2+3);
-    ctx.fillStyle=CC.txt;ctx.textAlign='left';
-    ctx.fillText(fmtK(ds.data[i]||0), P.l+bW+5, y+bH/2+3);
-  });
-}
-
-function drawLine(ctx,W,H,cfg){
-  const labels=cfg.data.labels, dsets=cfg.data.datasets;
-  const P={t:22,r:10,b:36,l:62};
-  const gW=W-P.l-P.r, gH=H-P.t-P.b, n=labels.length;
-  const all=dsets.flatMap(d=>d.data.map(v=>v||0));
-  const vMin=Math.min(0,...all), vMax=Math.max(...all,1), vR=vMax-vMin;
-  niceTicks(vMin,vMax,4).forEach(v=>{
-    const y=P.t+gH*(1-(v-vMin)/vR);
-    ctx.strokeStyle=CC.b1;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+gW,y);ctx.stroke();
-    ctx.fillStyle=CC.txt3;ctx.font=`9px ${FONT}`;ctx.textAlign='right';
-    ctx.fillText(fmtK(v),P.l-4,y+3);
-  });
-  dsets.forEach(ds=>{
-    const col=ds.borderColor||'#c8a84b';
-    ctx.strokeStyle=col; ctx.lineWidth=ds.borderWidth||2;
-    ctx.beginPath();
-    ds.data.forEach((v,i)=>{
-      v=v||0;
-      const x=P.l+(n<=1?gW/2:i*gW/(n-1));
-      const y=P.t+gH*(1-(v-vMin)/vR);
-      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-    if(ds.backgroundColor){
-      ctx.fillStyle=ds.backgroundColor;
-      const y0=P.t+gH*(1-(0-vMin)/vR);
-      ctx.beginPath();
-      ds.data.forEach((v,i)=>{const x=P.l+(n<=1?gW/2:i*gW/(n-1));const y=P.t+gH*(1-(v||0-vMin)/vR);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-      ctx.lineTo(P.l+gW,y0);ctx.lineTo(P.l,y0);ctx.closePath();ctx.fill();
-    }
-    ctx.fillStyle=col;
-    ds.data.forEach((v,i)=>{
-      const x=P.l+(n<=1?gW/2:i*gW/(n-1)), y=P.t+gH*(1-((v||0)-vMin)/vR);
-      ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();
-    });
-  });
-  ctx.fillStyle=CC.txt3;ctx.font=`9px ${FONT}`;ctx.textAlign='center';
-  const step=Math.ceil(n/14);
-  labels.forEach((l,i)=>{
-    if(i%step!==0) return;
-    ctx.fillText(l.length>7?l.slice(0,6)+'…':l, P.l+(n<=1?gW/2:i*gW/(n-1)), H-6);
-  });
-  let lx=P.l;
-  dsets.forEach(ds=>{
-    ctx.fillStyle=ds.borderColor||'#c8a84b';ctx.fillRect(lx,5,16,3);
-    ctx.fillStyle=CC.txt2;ctx.font=`9px ${FONT}`;ctx.textAlign='left';
-    ctx.fillText(ds.label||'',lx+20,12);
-    lx+=ctx.measureText(ds.label||'').width+38;
-  });
-}
-
-function drawDonut(ctx,W,H,cfg){
-  const data=cfg.data.datasets[0].data, labels=cfg.data.labels;
-  const cols=cfg.data.datasets[0].backgroundColor;
-  const total=data.reduce((s,v)=>s+(v||0),0);
-  const legRows=Math.ceil(labels.length/2), legH=legRows*16+8;
-  const cy=(H-legH)/2, cx=W/2;
-  const r=Math.min(cx-10,(H-legH)/2-10), inner=r*0.62;
-  let angle=-Math.PI/2;
-  data.forEach((v,i)=>{
-    const sl=(v/total)*Math.PI*2;
-    ctx.fillStyle=cols[i]||'#c8a84b';
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+sl);ctx.closePath();ctx.fill();
-    ctx.fillStyle=CC.bg;
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r+1,angle-.01,angle+sl+.01);ctx.closePath();ctx.fill();
-    angle+=sl;
-  });
-  ctx.fillStyle=CC.bg;ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=CC.txt;ctx.font=`bold 11px ${FONT}`;ctx.textAlign='center';
-  ctx.fillText(fmtK(total),cx,cy+4);
-  const cW=W/2;
-  labels.forEach((l,i)=>{
-    const col=i%2, row=Math.floor(i/2);
-    const lx=col*cW+14, ly=H-legH+row*16+14;
-    ctx.fillStyle=cols[i]||'#c8a84b';ctx.fillRect(lx,ly-7,8,8);
-    ctx.fillStyle=CC.txt2;ctx.font=`9px ${FONT}`;ctx.textAlign='left';
-    ctx.fillText(l.length>20?l.slice(0,19)+'…':l, lx+12, ly);
-  });
-}
 function filter(ano,mes,tipo){ return ENTRIES.filter(r=>(ano==='todos'||r.ano==ano)&&(mes==='todos'||r.mes==mes)&&(tipo==='todos'||r.tipo===tipo)); }
 function sumCat(data){ const g={}; data.forEach(r=>g[r.categoria]=(g[r.categoria]||0)+r.valor); return g; }
 function monthly(ano){ const res={}; for(let m=1;m<=12;m++){ const rows=ENTRIES.filter(r=>r.ano==ano&&r.mes==m); res[m]={rec:rows.filter(r=>r.tipo==='receita').reduce((s,r)=>s+r.valor,0),dep:rows.filter(r=>r.tipo==='despesa').reduce((s,r)=>s+r.valor,0)}; } return res; }
@@ -1726,13 +1501,12 @@ function clearImport() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.onload = () => {
   initCatFilter();
-  rDash();
   document.getElementById('o-mes').value = '3';
   document.getElementById('o-ano').value = '2026';
-  // Import page init
   selBank('nubank');
   selBank2('nubank');
   updateApiKeyUI();
+  rDash();
 };
 </script>
 </body>
