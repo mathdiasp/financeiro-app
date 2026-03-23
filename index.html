@@ -192,30 +192,8 @@ tbody td{padding:9px 14px;color:var(--txt2);}
 </style>
 </head>
 <body>
-<div id="lockscreen" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;">
-  <div style="background:#111118;border:1px solid #2d2d3d;border-radius:12px;padding:40px 44px;width:360px;max-width:92vw;text-align:center">
-    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8a84b;letter-spacing:.06em;margin-bottom:4px">FINANCEIRO</div>
-    <div style="font-size:10px;color:#55556a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px">Dashboard Pessoal</div>
-    <div style="font-size:9px;color:#55556a;letter-spacing:.1em;text-transform:uppercase;text-align:left;margin-bottom:6px">Senha</div>
-    <input id="pwd-inp" type="password" placeholder="••••••••"
-      style="width:100%;background:#18181f;border:1px solid #2d2d3d;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:14px;padding:11px 14px;border-radius:6px;outline:none;letter-spacing:.15em;margin-bottom:10px;box-sizing:border-box"
-      onkeydown="if(event.key==='Enter')checkPwd()"
-      onfocus="this.style.borderColor='#c8a84b'" onblur="this.style.borderColor='#2d2d3d'">
-    <div id="pwd-err" style="font-size:10px;color:#e05555;height:16px;margin-bottom:8px"></div>
-    <button onclick="checkPwd()" style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">ENTRAR</button>
-  </div>
-</div>
-<script>
-(function(){ if(sessionStorage.getItem('fin_auth')==='1') document.getElementById('lockscreen').style.display='none'; })();
-function checkPwd(){
-  const HASH='5f73c3514a683022e89a2adb3d84979594bb5184732538519afdae15ff6564a5';
-  sha256(document.getElementById('pwd-inp').value).then(h=>{
-    if(h===HASH){sessionStorage.setItem('fin_auth','1');const ls=document.getElementById('lockscreen');ls.style.transition='opacity .3s';ls.style.opacity='0';setTimeout(()=>ls.style.display='none',300);}
-    else{document.getElementById('pwd-err').textContent='Senha incorreta';document.getElementById('pwd-inp').style.borderColor='#e05555';document.getElementById('pwd-inp').value='';setTimeout(()=>{document.getElementById('pwd-err').textContent='';document.getElementById('pwd-inp').style.borderColor='#2d2d3d';},2000);}
-  });
-}
-async function sha256(msg){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-</script>
+<div id="lockscreen" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;"><div style="background:#111118;border:1px solid #2d2d3d;border-radius:12px;padding:40px 44px;width:360px;max-width:92vw;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8a84b;letter-spacing:.06em;margin-bottom:4px">FINANCEIRO</div><div style="font-size:10px;color:#55556a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px">Dashboard Pessoal</div><div style="font-size:9px;color:#55556a;letter-spacing:.1em;text-transform:uppercase;text-align:left;margin-bottom:6px">Senha</div><input id="pwd-inp" type="password" placeholder="••••••••" style="width:100%;background:#18181f;border:1px solid #2d2d3d;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:14px;padding:11px 14px;border-radius:6px;outline:none;letter-spacing:.15em;margin-bottom:10px;box-sizing:border-box" onkeydown="if(event.key==='Enter')checkPwd()" onfocus="this.style.borderColor='#c8a84b'" onblur="this.style.borderColor='#2d2d3d'"><div id="pwd-err" style="font-size:10px;color:#e05555;height:16px;margin-bottom:8px"></div><button onclick="checkPwd()" style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">ENTRAR</button></div></div>
+<script>(function(){if(sessionStorage.getItem('fin_auth')==='1')document.getElementById('lockscreen').style.display='none';})();function checkPwd(){const HASH='5f73c3514a683022e89a2adb3d84979594bb5184732538519afdae15ff6564a5';sha256(document.getElementById('pwd-inp').value).then(h=>{if(h===HASH){sessionStorage.setItem('fin_auth','1');const ls=document.getElementById('lockscreen');ls.style.transition='opacity .3s';ls.style.opacity='0';setTimeout(()=>ls.style.display='none',300);}else{document.getElementById('pwd-err').textContent='Senha incorreta';document.getElementById('pwd-inp').style.borderColor='#e05555';document.getElementById('pwd-inp').value='';setTimeout(()=>{document.getElementById('pwd-err').textContent='';document.getElementById('pwd-inp').style.borderColor='#2d2d3d';},2000);}});}async function sha256(msg){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}</script>
 <div class="app">
 <!-- SIDEBAR -->
 <aside class="sb">
@@ -395,7 +373,15 @@ async function sha256(msg){const buf=await crypto.subtle.digest('SHA-256',new Te
       <span class="ttitle" id="l-count">–</span>
       <span style="font-size:10px;color:var(--txt3)" id="l-total">–</span>
     </div>
-    <table><thead><tr><th>OCORRÊNCIA</th><th>VENCIMENTO</th><th>CATEGORIA</th><th>DESCRIÇÃO</th><th>TIPO</th><th style="text-align:right">VALOR</th><th></th></tr></thead>
+    <table><thead><tr>
+      <th id="lh-ocorr" onclick="sortLanc('ocorr')" style="cursor:pointer;user-select:none">OCORRÊNCIA</th>
+      <th id="lh-vcto"  onclick="sortLanc('vcto')"  style="cursor:pointer;user-select:none">VENCIMENTO ↓</th>
+      <th id="lh-cat"   onclick="sortLanc('cat')"   style="cursor:pointer;user-select:none">CATEGORIA</th>
+      <th>DESCRIÇÃO</th>
+      <th>TIPO</th>
+      <th id="lh-valor" onclick="sortLanc('valor')" style="cursor:pointer;user-select:none;text-align:right">VALOR</th>
+      <th></th>
+    </tr></thead>
     <tbody id="l-tbody"></tbody></table>
     <div class="tfoot"><span id="l-pinfo">–</span><div class="pag" id="l-pag"></div></div>
   </div>
@@ -963,6 +949,16 @@ function initCatFilter() {
   CATS.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; fcat.appendChild(o); });
 }
 
+let lSortCol = 'vcto';  // 'vcto' | 'ocorr' | 'valor' | 'cat'
+let lSortDir = -1;      // -1 = desc, 1 = asc
+
+function sortLanc(col) {
+  if(lSortCol === col) lSortDir *= -1;
+  else { lSortCol = col; lSortDir = col === 'valor' ? -1 : -1; }
+  lPage = 1;
+  drawLanc();
+}
+
 function rLanc() { lPage=1; drawLanc(); }
 function drawLanc() {
   const ano=document.getElementById('l-ano').value, mes=document.getElementById('l-mes').value;
@@ -970,13 +966,20 @@ function drawLanc() {
   const search=document.getElementById('l-search').value.toLowerCase();
   let data=ENTRIES.filter(r=>(ano==='todos'||r.ano==ano)&&(mes==='todos'||r.mes==mes)&&(tipo==='todos'||r.tipo===tipo)&&(cat==='todos'||r.categoria===cat)&&(!search||r.descricao.toLowerCase().includes(search)||r.categoria.toLowerCase().includes(search)));
 
-  // Sort: full date desc first, then ano/mes desc
-  data.sort((a,b)=>{
-    const hasDateA = !!a.data, hasDateB = !!b.data;
-    if(hasDateA && hasDateB) return new Date(b.data) - new Date(a.data);
-    if(hasDateA && !hasDateB) return (b.ano*100+b.mes) - (a.ano*100+a.mes) || -1;
-    if(!hasDateA && hasDateB) return (b.ano*100+b.mes) - (a.ano*100+a.mes) || 1;
-    return (b.ano*100+b.mes) - (a.ano*100+a.mes);
+  // Helper: get sortable date value from a record field
+  const dateVal = (r, field) => {
+    const s = r[field];
+    if(s) return new Date(s + 'T12:00:00').getTime();
+    return new Date(r.ano, r.mes - 1, 28).getTime();
+  };
+
+  data.sort((a, b) => {
+    let diff = 0;
+    if(lSortCol === 'vcto')  diff = dateVal(b,'data_vcto') - dateVal(a,'data_vcto');
+    if(lSortCol === 'ocorr') diff = dateVal(b,'data')      - dateVal(a,'data');
+    if(lSortCol === 'valor') diff = b.valor - a.valor;
+    if(lSortCol === 'cat')   diff = (a.categoria||'').localeCompare(b.categoria||'');
+    return diff * lSortDir;
   });
 
   const totalSaldo=data.reduce((s,r)=>s+r.valor*(r.tipo==='despesa'?-1:1),0);
@@ -985,16 +988,22 @@ function drawLanc() {
   const pages=Math.ceil(data.length/PS);
   const slice=data.slice((lPage-1)*PS, lPage*PS);
 
+  // Update sortable header indicators
+  const arrow = lSortDir === -1 ? ' ↓' : ' ↑';
+  const hOcorr = `OCORRÊNCIA${lSortCol==='ocorr'?arrow:''}`;
+  const hVcto  = `VENCIMENTO${lSortCol==='vcto'?arrow:''}`;
+  const hCat   = `CATEGORIA${lSortCol==='cat'?arrow:''}`;
+  const hValor = `VALOR${lSortCol==='valor'?arrow:''}`;
+  document.getElementById('lh-ocorr').textContent = hOcorr;
+  document.getElementById('lh-vcto').textContent  = hVcto;
+  document.getElementById('lh-cat').textContent   = hCat;
+  document.getElementById('lh-valor').textContent = hValor;
+
   document.getElementById('l-tbody').innerHTML=slice.map((r)=>{
     const idx=ENTRIES.indexOf(r);
-    // Occurrence date (when purchase happened)
-    const ocorrFmt = r.data
-      ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR')
-      : `${MESES[r.mes]}/${r.ano}`;
-    // Vencimento date
-    const vencFmt = r.data_vcto
-      ? new Date(r.data_vcto + 'T12:00:00').toLocaleDateString('pt-BR')
-      : `${MESES[r.mes]}/${r.ano}`;
+    const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : `${MESES[r.mes]}/${r.ano}`;
+    const ocorrFmt = fmtD(r.data);
+    const vencFmt  = fmtD(r.data_vcto);
     const parcelaTag = r.parcela ? `<span style="font-size:9px;color:var(--txt3);margin-left:4px">${r.parcela}/${r.totalParcelas}</span>` : '';
     return `<tr>
       <td style="color:var(--txt3);white-space:nowrap;font-size:10px">${ocorrFmt}</td>
