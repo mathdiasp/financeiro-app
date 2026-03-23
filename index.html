@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -179,6 +180,59 @@ tbody td{padding:9px 14px;color:var(--txt2);}
 </style>
 </head>
 <body>
+
+<div id="lockscreen" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#111118;border:1px solid #2d2d3d;border-radius:12px;padding:40px 44px;width:360px;max-width:92vw;text-align:center">
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8a84b;letter-spacing:.06em;margin-bottom:4px">FINANCEIRO</div>
+    <div style="font-size:10px;color:#55556a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:32px">Dashboard Pessoal</div>
+    <div style="font-size:9px;color:#55556a;letter-spacing:.1em;text-transform:uppercase;text-align:left;margin-bottom:6px">Senha</div>
+    <input id="pwd-inp" type="password" placeholder="••••••••"
+      style="width:100%;background:#18181f;border:1px solid #2d2d3d;color:#e8e8f0;font-family:'DM Mono',monospace;font-size:14px;padding:11px 14px;border-radius:6px;outline:none;letter-spacing:.15em;margin-bottom:10px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')checkPwd()"
+      onfocus="this.style.borderColor='#c8a84b'" onblur="this.style.borderColor='#2d2d3d'">
+    <div id="pwd-err" style="font-size:10px;color:#e05555;height:16px;margin-bottom:8px"></div>
+    <button onclick="checkPwd()"
+      style="width:100%;background:#c8a84b;border:none;color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:11px;border-radius:6px;cursor:pointer;letter-spacing:.06em">
+      ENTRAR
+    </button>
+  </div>
+</div>
+<script>
+(function(){
+  // Check if already authenticated this session
+  if(sessionStorage.getItem('fin_auth')==='1'){
+    document.getElementById('lockscreen').style.display='none';
+  }
+})();
+function checkPwd(){
+  const v=document.getElementById('pwd-inp').value;
+  // SHA-256 of password stored as hash — change HASH below to your password hash
+  // Default password: matheus2026
+  // To change: run sha256('yourpassword') at console and update HASH
+  const HASH='5f73c3514a683022e89a2adb3d84979594bb5184732538519afdae15ff6564a5';
+  sha256(v).then(h=>{
+    if(h===HASH){
+      sessionStorage.setItem('fin_auth','1');
+      const ls=document.getElementById('lockscreen');
+      ls.style.opacity='1';
+      ls.style.transition='opacity .3s';
+      setTimeout(()=>{ls.style.opacity='0';setTimeout(()=>ls.style.display='none',300);},100);
+    } else {
+      const err=document.getElementById('pwd-err');
+      err.textContent='Senha incorreta';
+      const inp=document.getElementById('pwd-inp');
+      inp.style.borderColor='#e05555';
+      inp.value='';
+      setTimeout(()=>{err.textContent='';inp.style.borderColor='#2d2d3d';},2000);
+    }
+  });
+}
+async function sha256(msg){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+</script>
+
 <div class="app">
 <!-- SIDEBAR -->
 <aside class="sb">
