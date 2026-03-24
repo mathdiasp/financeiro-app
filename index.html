@@ -1057,8 +1057,11 @@ function onCartaoChange() {
   } else {
     cfg.style.display = 'block';
     const c = getCartaoConfig(cartao);
-    document.getElementById('f-corte').value = c.corte;
-    document.getElementById('f-venc').value = c.venc;
+    // Corte é opcional — só preenche se tiver salvo pelo usuário
+    const savedRaw = localStorage.getItem('fin_cartao_' + cartao);
+    const saved = savedRaw ? JSON.parse(savedRaw) : null;
+    document.getElementById('f-corte').value = (saved && saved.corte) ? saved.corte : '';
+    document.getElementById('f-venc').value  = c.venc;
   }
   calcParcelas();
 }
@@ -1072,11 +1075,11 @@ function calcParcelas() {
 
   if(!dataStr || valor === 0) { preview.style.display = 'none'; return; }
 
-  // Save cartão config if changed
+  // Save venc if user changed it; save corte only if filled
   if(cartao !== 'none') {
-    const corte = parseInt(document.getElementById('f-corte').value) || CARTAO_DEFAULTS[cartao]?.corte || 15;
-    const venc  = parseInt(document.getElementById('f-venc').value)  || CARTAO_DEFAULTS[cartao]?.venc  || 5;
-    saveCartaoConfig(cartao, corte, venc);
+    const corteVal = parseInt(document.getElementById('f-corte').value) || 0;
+    const vencVal  = parseInt(document.getElementById('f-venc').value) || CARTAO_DEFAULTS[cartao]?.venc;
+    saveCartaoConfig(cartao, corteVal || null, vencVal);
   }
 
   const dataCompra = new Date(dataStr + 'T12:00:00');
@@ -1108,28 +1111,23 @@ function gerarParcelas(dataCompra, cartao, nParcelas, valorTotal) {
     }
   } else {
     const cfg = getCartaoConfig(cartao);
-    const corteDia = parseInt(document.getElementById('f-corte')?.value) || cfg.corte;
-    const vencDia  = parseInt(document.getElementById('f-venc')?.value)  || cfg.venc;
+    const corteRaw = parseInt(document.getElementById('f-corte')?.value);
+    const vencDia  = parseInt(document.getElementById('f-venc')?.value) || cfg.venc;
+    // Corte: if empty/0, default to (vencDia - 7) clamped to 1
+    const corteDia = (!corteRaw || corteRaw <= 0) ? Math.max(1, vencDia - 7) : corteRaw;
+
     const diaCompra = dataCompra.getDate();
+    const mesCompra = dataCompra.getMonth(); // 0-indexed
+    const anoCompra = dataCompra.getFullYear();
 
-    // Determine the first vencimento:
-    // - compra ATÉ o dia de corte → entra na fatura atual → vence no mês seguinte (no vencDia)
-    // - compra APÓS o dia de corte → entra na próxima fatura → vence em dois meses
-    let mesVenc = dataCompra.getMonth(); // 0-indexed
-    let anoVenc = dataCompra.getFullYear();
-
-    if(diaCompra <= corteDia) {
-      // Entra na fatura atual, vence próximo mês
-      mesVenc += 1;
-    } else {
-      // Entra na fatura seguinte, vence em dois meses
-      mesVenc += 2;
-    }
-    // Normalize month overflow
-    while(mesVenc > 11) { mesVenc -= 12; anoVenc++; }
+    // How many months until first vencimento:
+    // - compra ATÉ o dia de corte → entra na fatura atual → primeiro vencimento = próximo mês (mesCompra + 1)
+    // - compra APÓS o dia de corte → entra na fatura seguinte → primeiro vencimento = (mesCompra + 2)
+    const mesesOffset = diaCompra <= corteDia ? 1 : 2;
 
     for(let i = 0; i < nParcelas; i++) {
-      let m = mesVenc + i, a = anoVenc;
+      let m = mesCompra + mesesOffset + i;
+      let a = anoCompra;
       while(m > 11) { m -= 12; a++; }
       const d = new Date(a, m, vencDia);
       parcelas.push({
