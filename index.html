@@ -623,13 +623,17 @@ tbody td{padding:9px 14px;color:var(--txt2);}
       <div id="cartao-config" style="display:none;margin-top:10px">
         <div class="form-row">
           <div>
-            <div class="form-lbl">Dia de Corte <span style="color:var(--txt3);font-size:9px">(compras após este dia → próxima fatura)</span></div>
-            <input id="f-corte" class="form-ctrl" type="number" min="1" max="31" style="width:100%" oninput="calcParcelas()">
+            <div class="form-lbl">Dia de Corte <span style="color:var(--txt3);font-size:9px">opcional · compras após este dia → próxima fatura</span></div>
+            <input id="f-corte" class="form-ctrl" type="number" min="1" max="31" style="width:100%" placeholder="ex: 13" oninput="calcParcelas()">
           </div>
           <div>
             <div class="form-lbl">Dia de Vencimento</div>
-            <input id="f-venc" class="form-ctrl" type="number" min="1" max="31" style="width:100%" oninput="calcParcelas()">
+            <input id="f-venc" class="form-ctrl" type="number" min="1" max="31" style="width:100%" placeholder="ex: 20" oninput="calcParcelas()">
           </div>
+        </div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:4px">
+          Esses valores são salvos automaticamente para cada cartão. Para resetar: 
+          <span onclick="resetCartaoConfig()" style="color:var(--gold);cursor:pointer;text-decoration:underline">limpar configuração</span>
         </div>
       </div>
       <div id="parcelas-preview" style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:10px 14px;font-size:10px;color:var(--txt3);margin-top:8px;display:none;line-height:2"></div>
@@ -1049,6 +1053,16 @@ function saveCartaoConfig(cartao, corte, venc) {
   localStorage.setItem('fin_cartao_' + cartao, JSON.stringify({ corte, venc }));
 }
 
+function resetCartaoConfig() {
+  const cartao = document.getElementById('f-cartao').value;
+  if(cartao !== 'none') {
+    localStorage.removeItem('fin_cartao_' + cartao);
+    document.getElementById('f-corte').value = '';
+    document.getElementById('f-venc').value = CARTAO_DEFAULTS[cartao]?.venc || '';
+    calcParcelas();
+  }
+}
+
 function onCartaoChange() {
   const cartao = document.getElementById('f-cartao').value;
   const cfg = document.getElementById('cartao-config');
@@ -1056,12 +1070,11 @@ function onCartaoChange() {
     cfg.style.display = 'none';
   } else {
     cfg.style.display = 'block';
-    const c = getCartaoConfig(cartao);
-    // Corte é opcional — só preenche se tiver salvo pelo usuário
+    // Load saved config — corte only if user previously set it explicitly
     const savedRaw = localStorage.getItem('fin_cartao_' + cartao);
     const saved = savedRaw ? JSON.parse(savedRaw) : null;
-    document.getElementById('f-corte').value = (saved && saved.corte) ? saved.corte : '';
-    document.getElementById('f-venc').value  = c.venc;
+    document.getElementById('f-corte').value = (saved && saved.corte > 0) ? saved.corte : '';
+    document.getElementById('f-venc').value  = (saved && saved.venc) ? saved.venc : (CARTAO_DEFAULTS[cartao]?.venc || '');
   }
   calcParcelas();
 }
@@ -1149,8 +1162,10 @@ function gerarParcelas(dataCompra, cartao, nParcelas, valorTotal) {
 }
 
 function openModal() {
-  // Set today's date as default
-  const today = new Date().toISOString().slice(0,10);
+  // Set today's date as default — use local timezone to avoid UTC offset issue
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  document.getElementById('f-data').value = today;
   document.getElementById('f-data').value = today;
   document.getElementById('modal').classList.add('open');
   toggleCartaoFields();
