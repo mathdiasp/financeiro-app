@@ -1242,9 +1242,10 @@ function saveEntry() {
 
   parcelas.forEach((p, i) => {
     ENTRIES.push({
-      data: p.data,
-      ano: p.ano,
-      mes: p.mes,
+      data: dataStr,            // data de ocorrência = data da compra
+      data_vcto: p.data,        // data de vencimento = calculada por gerarParcelas
+      ano: p.ano,               // ano do vencimento (para filtros mensais)
+      mes: p.mes,               // mês do vencimento
       tipo,
       categoria: cat,
       descricao: nParcelas > 1 ? `${desc} (${i+1}/${nParcelas})` : desc,
