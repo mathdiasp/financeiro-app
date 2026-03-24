@@ -1136,7 +1136,6 @@ function onPrimeiraParcela(newDateStr) {
   if(!newDateStr || !window._parcelas) return;
   const parcelas = window._parcelas;
   const base = new Date(newDateStr + 'T12:00:00');
-  // Recalculate all subsequent dates keeping the same day-of-month
   parcelas[0].data = newDateStr;
   parcelas[0].dataFmt = base.toLocaleDateString('pt-BR');
   for(let i = 1; i < parcelas.length; i++) {
@@ -1147,6 +1146,8 @@ function onPrimeiraParcela(newDateStr) {
     if(el) el.textContent = parcelas[i].dataFmt;
   }
 }
+
+function gerarParcelas(dataCompra, cartao, nParcelas, valorTotal) {
   const valorParcela = Math.round((valorTotal / nParcelas) * 100) / 100;
   const parcelas = [];
 
