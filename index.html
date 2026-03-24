@@ -1101,12 +1101,52 @@ function calcParcelas() {
   if(nParcelas <= 1 && cartao === 'none') { preview.style.display = 'none'; return; }
 
   preview.style.display = 'block';
-  preview.innerHTML = parcelas.map((p, i) =>
-    `<span style="color:var(--txt3)">${i+1}x</span> <span style="color:var(--txt);font-weight:500">${R2(p.valor)}</span> <span style="color:var(--txt3)">→ vence</span> <span style="color:var(--gold)">${p.dataFmt}</span>`
-  ).join('<br>');
+
+  // Render parcelas with editable first date
+  window._parcelas = parcelas; // store for edit
+  renderParcelasPreview();
 }
 
-function gerarParcelas(dataCompra, cartao, nParcelas, valorTotal) {
+function renderParcelasPreview() {
+  const parcelas = window._parcelas;
+  if(!parcelas) return;
+  const preview = document.getElementById('parcelas-preview');
+  preview.innerHTML = parcelas.map((p, i) => {
+    if(i === 0) {
+      // First parcela: show editable date input
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="color:var(--txt3);min-width:16px">${i+1}x</span>
+        <span style="color:var(--txt);font-weight:500">${R2(p.valor)}</span>
+        <span style="color:var(--txt3)">→ vence</span>
+        <input type="date" id="parcela-data-0" value="${p.data}"
+          style="background:transparent;border:none;border-bottom:1px solid var(--gold);color:var(--gold);font-family:'DM Mono',monospace;font-size:10px;padding:2px 4px;cursor:pointer;outline:none;width:120px"
+          onchange="onPrimeiraParcela(this.value)">
+      </div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="color:var(--txt3);min-width:16px">${i+1}x</span>
+      <span style="color:var(--txt);font-weight:500">${R2(p.valor)}</span>
+      <span style="color:var(--txt3)">→ vence</span>
+      <span id="parcela-data-${i}" style="color:var(--gold);font-size:10px">${p.dataFmt}</span>
+    </div>`;
+  }).join('');
+}
+
+function onPrimeiraParcela(newDateStr) {
+  if(!newDateStr || !window._parcelas) return;
+  const parcelas = window._parcelas;
+  const base = new Date(newDateStr + 'T12:00:00');
+  // Recalculate all subsequent dates keeping the same day-of-month
+  parcelas[0].data = newDateStr;
+  parcelas[0].dataFmt = base.toLocaleDateString('pt-BR');
+  for(let i = 1; i < parcelas.length; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, base.getDate());
+    parcelas[i].data = d.toISOString().slice(0,10);
+    parcelas[i].dataFmt = d.toLocaleDateString('pt-BR');
+    const el = document.getElementById(`parcela-data-${i}`);
+    if(el) el.textContent = parcelas[i].dataFmt;
+  }
+}
   const valorParcela = Math.round((valorTotal / nParcelas) * 100) / 100;
   const parcelas = [];
 
@@ -1179,6 +1219,7 @@ function closeModal() {
   document.getElementById('f-cartao').value = 'none';
   document.getElementById('cartao-config').style.display = 'none';
   document.getElementById('parcelas-preview').style.display = 'none';
+  window._parcelas = null;
 }
 
 function saveEntry() {
@@ -1192,8 +1233,11 @@ function saveEntry() {
 
   if(!valor || !desc || !cat || !dataStr) { alert('Preencha todos os campos.'); return; }
 
+  // Use edited parcelas if available (user may have changed first date)
   const dataCompra = new Date(dataStr + 'T12:00:00');
-  const parcelas = gerarParcelas(dataCompra, tipo === 'despesa' ? cartao : 'none', nParcelas, Math.abs(valor));
+  const parcelas = (window._parcelas && window._parcelas.length === nParcelas)
+    ? window._parcelas
+    : gerarParcelas(dataCompra, tipo === 'despesa' ? cartao : 'none', nParcelas, Math.abs(valor));
 
   parcelas.forEach((p, i) => {
     ENTRIES.push({
